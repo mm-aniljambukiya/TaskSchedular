@@ -1,31 +1,39 @@
 ﻿using Microsoft.Win32.TaskScheduler;
 using System;
+using System.Xml.Linq;
 
 class Program
 {
     static void Main(string[] args)
     {
-        // Path to the XML file (you can directly provide the XML string here if preferred)
-        string xmlFilePath = @"C:\Users\MagnusMinds\Desktop\Every minutes.xml";
 
-        // Load the XML content
+        Console.WriteLine("Enter Task Scheduler Path : ");
+        string xmlFilePath = Console.ReadLine();
         string taskXml = System.IO.File.ReadAllText(xmlFilePath);
+        Console.WriteLine("Enter BAT File Path : ");
+        string filePath = Console.ReadLine();
 
-        // Create the TaskService instance to work with the local Task Scheduler
+
         using (TaskService ts = new TaskService())
         {
             try
             {
-                // Register the task from XML
                 TaskDefinition taskDefinition = ts.NewTask();
+                XDocument xdoc = XDocument.Load(xmlFilePath);
+                XNamespace ns = "http://schemas.microsoft.com/windows/2004/02/mit/task";
+                XElement argumentsElement = xdoc.Descendants(ns + "Arguments").FirstOrDefault();
+                if (argumentsElement != null)
+                {
+                    // Update the value of <Arguments>
+                    argumentsElement.Value = "/c start /min \"\" \""+ filePath + "\"";
+                }
+                else
+                {
+                    Console.WriteLine("<Arguments> element not found.");
+                }
 
-                // Import XML into the TaskDefinition
-                taskDefinition.XmlText = taskXml;
-
-                // Register the task in the scheduler (it will appear in Task Scheduler Library)
-                // Provide task path and name in RegisterTaskDefinition ("/" + TaskName)
+                taskDefinition.XmlText = xdoc.ToString();
                 ts.RootFolder.RegisterTaskDefinition(@"\EveryMinutesTask", taskDefinition);
-
                 Console.WriteLine("Task registered successfully!");
             }
             catch (Exception ex)
